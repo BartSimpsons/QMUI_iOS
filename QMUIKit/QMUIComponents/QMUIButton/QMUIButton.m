@@ -75,8 +75,7 @@ const CGFloat QMUIButtonCornerRadiusAdjustsBounds = -1;
 
 - (CGSize)sizeThatFits:(CGSize)size {
     // 如果调用 sizeToFit，那么传进来的 size 就是当前按钮的 size，此时的计算不要去限制宽高
-    // 系统 UIButton 不管任何时候，对 sizeThatFits:CGSizeZero 都会返回真实的内容大小，这里对齐
-    if (CGSizeEqualToSize(self.bounds.size, size) || CGSizeIsEmpty(size)) {
+    if (CGSizeEqualToSize(self.bounds.size, size)) {
         size = CGSizeMax;
     }
     
@@ -522,7 +521,6 @@ const CGFloat QMUIButtonCornerRadiusAdjustsBounds = -1;
         }
         self.highlightedBackgroundLayer.frame = self.bounds;
         self.highlightedBackgroundLayer.cornerRadius = self.layer.cornerRadius;
-        self.highlightedBackgroundLayer.qmui_maskedCorners = self.layer.qmui_maskedCorners;
         self.highlightedBackgroundLayer.backgroundColor = self.highlighted ? self.highlightedBackgroundColor.CGColor : UIColorClear.CGColor;
     }
     

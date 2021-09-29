@@ -22,31 +22,9 @@
     return [UIFont systemFontOfSize:fontSize weight:UIFontWeightLight];
 }
 
-+ (UIFont *)qmui_mediumSystemFontOfSize:(CGFloat)fontSize {
-    return [UIFont systemFontOfSize:fontSize weight:UIFontWeightMedium];
-}
-
 + (UIFont *)qmui_systemFontOfSize:(CGFloat)size weight:(QMUIFontWeight)weight italic:(BOOL)italic {
     UIFont *font = nil;
-    UIFontWeight fontWeight = ({
-        UIFontWeight w;
-        switch (weight) {
-            case QMUIFontWeightLight:
-                w = UIFontWeightLight;
-                break;
-            case QMUIFontWeightMedium:
-                w = UIFontWeightMedium;
-                break;
-            case QMUIFontWeightBold:
-                w = UIFontWeightSemibold;
-                break;
-            default:
-                w = UIFontWeightRegular;
-                break;
-        }
-        w;
-    });
-    font = [UIFont systemFontOfSize:size weight:fontWeight];
+    font = [UIFont systemFontOfSize:size weight:weight == QMUIFontWeightLight ? UIFontWeightLight : (weight == QMUIFontWeightBold ? UIFontWeightSemibold : UIFontWeightRegular)];
     if (!italic) {
         return font;
     }

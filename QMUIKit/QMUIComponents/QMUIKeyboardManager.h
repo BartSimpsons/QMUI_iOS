@@ -189,11 +189,6 @@
  */
 @property(nonatomic, assign, readonly) UIViewAnimationOptions animationOptions;
 
-/**
- *  当前是否浮动键盘
- */
-@property(nonatomic, assign, readonly) BOOL isFloatingKeyboard;
-
 @end
 
 

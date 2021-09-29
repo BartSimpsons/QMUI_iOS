@@ -96,7 +96,7 @@ static char kAssociatedObjectKey_qmuiCacheCellSizeByKeyAutomatically;
     objc_setAssociatedObject(self, &kAssociatedObjectKey_qmuiCacheCellSizeByKeyAutomatically, @(qmui_cacheCellSizeByKeyAutomatically), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
     
     if (qmui_cacheCellSizeByKeyAutomatically) {
-        QMUIAssert([self.collectionViewLayout isKindOfClass:[UICollectionViewFlowLayout class]], @"QMUICellSizeKeyCache", @"只支持 %@", NSStringFromClass(UICollectionViewFlowLayout.class));
+        NSAssert([self.collectionViewLayout isKindOfClass:[UICollectionViewFlowLayout class]], @"QMUICellSizeKeyCache 只支持 UICollectionViewFlowLayout");
         
         [self replaceMethodForDelegateIfNeeded:self.delegate];
         
@@ -151,8 +151,7 @@ static char kAssociatedObjectKey_qmuiAllKeyCaches;
     [collectionView qmui_collectionView:collectionView willDisplayCell:cell forItemAtIndexPath:indexPath];
     if (collectionView.qmui_cacheCellSizeByKeyAutomatically) {
         if (![collectionView.delegate respondsToSelector:@selector(qmui_collectionView:cacheKeyForItemAtIndexPath:)]) {
-            QMUIAssert(NO, @"QMUICellSizeKeyCache", @"%@ 需要实现 %@ 方法才能自动缓存 cell 高度", collectionView.delegate, NSStringFromSelector(@selector(qmui_collectionView:cacheKeyForItemAtIndexPath:)));
-            return;
+            NSAssert(NO, @"%@ 需要实现 %@ 方法才能自动缓存 cell 高度", collectionView.delegate, NSStringFromSelector(@selector(qmui_collectionView:cacheKeyForItemAtIndexPath:)));
         }
         id<NSCopying> cachedKey = [((id<QMUICellSizeKeyCache_UICollectionViewDelegate>)self) qmui_collectionView:collectionView cacheKeyForItemAtIndexPath:indexPath];
         [collectionView.qmui_currentCellSizeKeyCache cacheSize:cell.frame.size forKey:cachedKey];

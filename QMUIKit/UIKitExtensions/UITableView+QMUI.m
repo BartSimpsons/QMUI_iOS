@@ -92,7 +92,10 @@ const NSUInteger kFloatValuePrecision = 4;// 统一一个小数点运算精度
                     isIndexPathLegal = indexPath.row >= 0 && indexPath.row < rows;
                 }
                 if (!isIndexPathLegal) {
-                    QMUIAssert(NO, @"UITableView (QMUI)", @"%@ - target indexPath : %@ ，不合法的indexPath。\n%@", selfObject, indexPath, [NSThread callStackSymbols]);
+                    QMUILogWarn(@"UITableView (QMUI)", @"%@ - target indexPath : %@ ，不合法的indexPath。\n%@", selfObject, indexPath, [NSThread callStackSymbols]);
+                    if (QMUICMIActivated && !ShouldPrintQMUIWarnLogToConsole) {
+                        NSAssert(NO, @"出现不合法的indexPath");
+                    }
                     return;
                 }
                 
@@ -146,36 +149,17 @@ const NSUInteger kFloatValuePrecision = 4;// 统一一个小数点运算精度
             });
         }
         
+        // [UIKit Bug] 将 UISearchBar 作为 tableHeaderView 使用的 UITableView，在 tableView 尚未添加到 window 上就同时进行了 setTableHeaderView:、reloadData 的操作，会导致滚动异常
+        // https://github.com/Tencent/QMUI_iOS/issues/1215
         if (@available(iOS 11.0, *)) {
             OverrideImplementation([UITableView class], @selector(reloadData), ^id(__unsafe_unretained Class originClass, SEL originCMD, IMP (^originalIMPProvider)(void)) {
                 return ^(UITableView *selfObject) {
-                    
-                    // [UIKit Bug] iOS 11 及以上，关闭 estimated height 的 tableView 可能出现数据错乱引发 crash
-                    // https://github.com/Tencent/QMUI_iOS/issues/1243
-                    if (![selfObject qmui_getBoundBOOLForKey:@"kHasCalledReloadDataOnce"] && [selfObject.dataSource respondsToSelector:@selector(numberOfSectionsInTableView:)]) {
-                        NSInteger a = [selfObject.dataSource numberOfSectionsInTableView:selfObject];
-                        NSInteger b = [selfObject numberOfSections];
-                        if (a == 0 && b == 1) {
-                            // - [UITableView noteNumberOfRowsChanged]
-                            SEL selector = NSSelectorFromString([NSString qmui_stringByConcat:@"note", @"NumberOfRows", @"Changed", nil]);
-                            if ([selfObject respondsToSelector:selector]) {
-                                BeginIgnorePerformSelectorLeaksWarning
-                                [selfObject performSelector:selector];
-                                EndIgnorePerformSelectorLeaksWarning
-                            }
-                        }
-                    }
                     
                     // call super
                     void (*originSelectorIMP)(id, SEL);
                     originSelectorIMP = (void (*)(id, SEL))originalIMPProvider();
                     originSelectorIMP(selfObject, originCMD);
                     
-                    // 记录是否执行过一次 reloadData，目的是只对第一次 reloadData 做检查
-                    [selfObject qmui_bindBOOL:YES forKey:@"kHasCalledReloadDataOnce"];
-                    
-                    // [UIKit Bug] 将 UISearchBar 作为 tableHeaderView 使用的 UITableView，在 tableView 尚未添加到 window 上就同时进行了 setTableHeaderView:、reloadData 的操作，会导致滚动异常
-                    // https://github.com/Tencent/QMUI_iOS/issues/1215
                     // 简单用“存在 superview 却不存在 window”的方式来区分该 UITableView 是 UIViewController 里的还是 UITableViewController 里的
                     if (!selfObject.window && selfObject.superview && [selfObject.tableHeaderView isKindOfClass:UISearchBar.class]) {
                         [selfObject qmui_bindBOOL:YES forKey:@"kShouldFixContentSizeBugKey"];
@@ -235,7 +219,10 @@ const NSUInteger kFloatValuePrecision = 4;// 统一一个小数点运算精度
         isIndexPathLegal = indexPath.row < rows;
     }
     if (!isIndexPathLegal) {
-        QMUIAssert(NO, @"UITableView (QMUI)", @"%@ - target indexPath : %@ ，不合法的indexPath。\n%@", self, indexPath, [NSThread callStackSymbols]);
+        QMUILogWarn(@"UITableView (QMUI)", @"%@ - target indexPath : %@ ，不合法的indexPath。\n%@", self, indexPath, [NSThread callStackSymbols]);
+        if (QMUICMIActivated && !ShouldPrintQMUIWarnLogToConsole) {
+            NSAssert(NO, @"出现不合法的indexPath");
+        }
     } else {
         [self qmui_scrollToRowAtIndexPath:indexPath atScrollPosition:scrollPosition animated:animated];
     }

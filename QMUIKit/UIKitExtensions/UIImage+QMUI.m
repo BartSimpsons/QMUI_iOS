@@ -18,8 +18,6 @@
 #import "UIBezierPath+QMUI.h"
 #import "UIColor+QMUI.h"
 #import "QMUILog.h"
-#import "NSArray+QMUI.h"
-#import "CALayer+QMUI.h"
 #import <ImageIO/ImageIO.h>
 #import <CoreImage/CoreImage.h>
 #import <Accelerate/Accelerate.h>
@@ -62,15 +60,12 @@ CGSizeFlatSpecificScale(CGSize size, float scale) {
     if (!actionBlock || CGSizeIsEmpty(size)) {
         return nil;
     }
-    UIGraphicsImageRendererFormat *format = [[UIGraphicsImageRendererFormat alloc] init];
-    format.scale = scale;
-    format.opaque = opaque;
-    UIGraphicsImageRenderer *render = [[UIGraphicsImageRenderer alloc] initWithSize:size format:format];
-    UIImage *imageOut = [render imageWithActions:^(UIGraphicsImageRendererContext * _Nonnull rendererContext) {
-        CGContextRef context = rendererContext.CGContext;
-        CGContextInspectContextReturnVoid(context);
-        actionBlock(context);
-    }];
+    UIGraphicsBeginImageContextWithOptions(size, opaque, scale);
+    CGContextRef context = UIGraphicsGetCurrentContext();
+    CGContextInspectContext(context);
+    actionBlock(context);
+    UIImage *imageOut = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
     return imageOut;
 }
 
@@ -97,7 +92,7 @@ CGSizeFlatSpecificScale(CGSize size, float scale) {
 	unsigned char rgba[4] = {};
 	CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
 	CGContextRef context = CGBitmapContextCreate(rgba, 1, 1, 8, 4, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
-	CGContextInspectContext(context, nil);
+	CGContextInspectContext(context);
 	CGContextDrawImage(context, CGRectMake(0, 0, 1, 1), self.CGImage);
 	CGColorSpaceRelease(colorSpace);
 	CGContextRelease(context);
@@ -119,7 +114,7 @@ CGSizeFlatSpecificScale(CGSize size, float scale) {
     CGSize size = self.qmui_sizeInPixel;
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceGray();
     CGContextRef context = CGBitmapContextCreate(NULL, size.width, size.height, 8, 0, colorSpace, kCGBitmapByteOrderDefault);
-    CGContextInspectContext(context, nil);
+    CGContextInspectContext(context);
     CGColorSpaceRelease(colorSpace);
     if (context == NULL) {
         return nil;
@@ -576,7 +571,7 @@ CGSizeFlatSpecificScale(CGSize size, float scale) {
 + (UIImage *)qmui_imageWithColor:(UIColor *)color size:(CGSize)size cornerRadiusArray:(NSArray<NSNumber *> *)cornerRadius {
     size = CGSizeFlatted(size);
     CGContextInspectSize(size);
-    color = color ? color : [UIColor colorWithRed:1 green:1 blue:1 alpha:1];
+    color = color ? color : UIColorWhite;
     return [UIImage qmui_imageWithSize:size opaque:NO scale:0 actions:^(CGContextRef contextRef) {
         
         CGContextSetFillColorWithColor(contextRef, color.CGColor);
@@ -584,59 +579,6 @@ CGSizeFlatSpecificScale(CGSize size, float scale) {
         UIBezierPath *path = [UIBezierPath qmui_bezierPathWithRoundedRect:CGRectMakeWithSize(size) cornerRadiusArray:cornerRadius lineWidth:0];
         [path addClip];
         [path fill];
-    }];
-}
-
-+ (UIImage *)qmui_imageWithGradientColors:(NSArray<UIColor *> *)colors type:(QMUIImageGradientType)type locations:(NSArray<NSNumber *> *)locations size:(CGSize)size cornerRadiusArray:(NSArray<NSNumber *> *)cornerRadius {
-    size = CGSizeFlatted(size);
-    CGContextInspectSize(size);
-    locations = locations ?: @[@0, @1];
-    QMUIAssert(type != QMUIImageGradientTypeRadial || (type == QMUIImageGradientTypeRadial && locations.count == 2), @"UIImage (QMUI)", @"QMUIImageGradientTypeRadial 只能与2个 location 搭配使用，目前 locations 为 %@ 个", @(locations.count));
-    return [UIImage qmui_imageWithSize:size opaque:NO scale:0 actions:^(CGContextRef  _Nonnull contextRef) {
-        if (cornerRadius) {
-            UIBezierPath *path = [UIBezierPath qmui_bezierPathWithRoundedRect:CGRectMakeWithSize(size) cornerRadiusArray:cornerRadius lineWidth:0];
-            [path addClip];
-        }
-        
-        // 这里不用 CAGradientLayer 来渲染，因为发现实际效果会产生一些色差，暂不清楚为什么，所以只能用 Core Graphic 渲染
-        CGColorSpaceRef spaceRef = CGColorSpaceCreateDeviceRGB();
-        CGFloat cLocations[locations.count];
-        for (NSInteger i = 0; i < locations.count; i++) {
-            cLocations[i] = locations[i].qmui_CGFloatValue;
-        }
-
-        CGGradientRef gradient = CGGradientCreateWithColors(spaceRef, (CFArrayRef)[colors qmui_mapWithBlock:^id _Nonnull(UIColor * _Nonnull item) {
-            return (id)item.CGColor;
-        }], cLocations);
-        if (type == QMUIImageGradientTypeRadial) {
-            CGFloat minSize = MIN(size.width, size.height);
-            CGFloat radius = minSize / 2;
-            CGFloat horizontalRatio = size.width / minSize;
-            CGFloat verticalRatio = size.height / minSize;
-            // 缩放是为了让渐变的圆形可以按照 size 变成椭圆的
-            CGContextTranslateCTM(contextRef, -(horizontalRatio - 1) * size.width / 2, -(verticalRatio - 1) * size.height / 2);
-            CGContextScaleCTM(contextRef, horizontalRatio, verticalRatio);
-            CGContextDrawRadialGradient(contextRef,
-                                        gradient,
-                                        CGPointMake(size.width / 2, size.height / 2),
-                                        0,
-                                        CGPointMake(size.width / 2, size.height / 2),
-                                        radius,
-                                        kCGGradientDrawsBeforeStartLocation);
-        } else {
-            CGPoint startPoint = CGPointZero;
-            CGPoint endPoint = CGPointZero;
-            if (type == QMUIImageGradientTypeHorizontal) {
-                startPoint = CGPointMake(0, 0);
-                endPoint = CGPointMake(size.width, 0);
-            } else {
-                startPoint = CGPointMake(0, 0);
-                endPoint = CGPointMake(0, size.height);
-            }
-            CGContextDrawLinearGradient(contextRef, gradient, startPoint, endPoint, kCGGradientDrawsBeforeStartLocation);
-        }
-        CGColorSpaceRelease(spaceRef);
-        CGGradientRelease(gradient);
     }];
 }
 
@@ -756,6 +698,14 @@ CGSizeFlatSpecificScale(CGSize size, float scale) {
             break;
     }
     return [UIImage qmui_imageWithShape:shape size:size lineWidth:lineWidth tintColor:tintColor];
+}
+
++ (UIImage *)qmui_imageWithAttributedString:(NSAttributedString *)attributedString {
+    CGSize stringSize = [attributedString boundingRectWithSize:CGSizeMax options:NSStringDrawingUsesLineFragmentOrigin context:nil].size;
+    stringSize = CGSizeCeil(stringSize);
+    return [UIImage qmui_imageWithSize:stringSize opaque:NO scale:0 actions:^(CGContextRef contextRef) {
+        [attributedString drawInRect:CGRectMakeWithSize(stringSize)];
+    }];
 }
 
 + (UIImage *)qmui_imageWithView:(UIView *)view {

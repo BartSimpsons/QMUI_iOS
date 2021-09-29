@@ -23,6 +23,13 @@
 #import "QMUILog.h"
 #import "QMUIWeakObjectContainer.h"
 
+@interface UIView ()
+
+/// QMUI_Debug
+@property(nonatomic, assign, readwrite) BOOL qmui_hasDebugColor;
+@end
+
+
 @implementation UIView (QMUI)
 
 QMUISynthesizeBOOLProperty(qmui_tintColorCustomized, setQmui_tintColorCustomized)
@@ -352,7 +359,6 @@ static char kAssociatedObjectKey_viewController;
 
 
 const CGFloat QMUIViewSelfSizingHeight = INFINITY;
-const CGSize QMUIViewFixedSizeNone = {-1, -1};
 
 @implementation UIView (QMUI_Layout)
 
@@ -363,10 +369,6 @@ const CGSize QMUIViewFixedSizeNone = {-1, -1};
         OverrideImplementation([UIView class], @selector(setFrame:), ^id(__unsafe_unretained Class originClass, SEL originCMD, IMP (^originalIMPProvider)(void)) {
             return ^(UIView *selfObject, CGRect frame) {
                 
-                if (!CGSizeEqualToSize(selfObject.qmui_fixedSize, QMUIViewFixedSizeNone)) {
-                    frame.size = selfObject.qmui_fixedSize;
-                }
-                
                 // QMUIViewSelfSizingHeight 的功能
                 if (frame.size.width > 0 && isinf(frame.size.height)) {
                     CGFloat height = flat([selfObject sizeThatFits:CGSizeMake(CGRectGetWidth(frame), CGFLOAT_MAX)].height);
@@ -375,7 +377,10 @@ const CGSize QMUIViewFixedSizeNone = {-1, -1};
                 
                 // 对非法的 frame，Debug 下中 assert，Release 下会将其中的 NaN 改为 0，避免 crash
                 if (CGRectIsNaN(frame)) {
-                    QMUIAssert(NO, @"UIView (QMUI)", @"%@ setFrame:%@，参数包含 NaN，已被拦截并处理为 0。%@", selfObject, NSStringFromCGRect(frame), [NSThread callStackSymbols]);
+                    QMUILogWarn(@"UIView (QMUI)", @"%@ setFrame:%@，参数包含 NaN，已被拦截并处理为 0。%@", selfObject, NSStringFromCGRect(frame), [NSThread callStackSymbols]);
+                    if (QMUICMIActivated && !ShouldPrintQMUIWarnLogToConsole) {
+                        NSAssert(NO, @"UIView setFrame: 出现 NaN");
+                    }
                     if (!IS_DEBUG) {
                         frame = CGRectSafeValue(frame);
                     }
@@ -400,10 +405,6 @@ const CGSize QMUIViewFixedSizeNone = {-1, -1};
         
         OverrideImplementation([UIView class], @selector(setBounds:), ^id(__unsafe_unretained Class originClass, SEL originCMD, IMP (^originalIMPProvider)(void)) {
             return ^(UIView *selfObject, CGRect bounds) {
-                
-                if (!CGSizeEqualToSize(selfObject.qmui_fixedSize, QMUIViewFixedSizeNone)) {
-                    bounds.size = selfObject.qmui_fixedSize;
-                }
                 
                 CGRect precedingFrame = selfObject.frame;
                 CGRect precedingBounds = selfObject.bounds;
@@ -520,37 +521,6 @@ const CGSize QMUIViewFixedSizeNone = {-1, -1};
     self.frame = CGRectSetHeight(self.frame, height);
 }
 
-- (CGSize)qmui_size {
-    return self.frame.size;
-}
-
-- (void)setQmui_size:(CGSize)qmui_size {
-    self.frame = CGRectSetSize(self.frame, qmui_size);
-}
-
-static char kAssociatedObjectKey_fixedSize;
-- (void)setQmui_fixedSize:(CGSize)qmui_fixedSize {
-    objc_setAssociatedObject(self, &kAssociatedObjectKey_fixedSize, @(qmui_fixedSize), OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-    
-    if (!CGSizeEqualToSize(qmui_fixedSize, QMUIViewFixedSizeNone)) {
-        self.qmui_sizeThatFitsBlock = ^CGSize(__kindof UIView * _Nonnull view, CGSize size, CGSize superResult) {
-            if (!CGSizeEqualToSize(view.qmui_fixedSize, QMUIViewFixedSizeNone)) {
-                return view.qmui_fixedSize;
-            }
-            return superResult;
-        };
-        self.qmui_size = qmui_fixedSize;
-    }
-}
-
-- (CGSize)qmui_fixedSize {
-    NSNumber *result = objc_getAssociatedObject(self, &kAssociatedObjectKey_fixedSize);
-    if (!result) {
-        return QMUIViewFixedSizeNone;
-    }
-    return result.CGSizeValue;
-}
-
 - (CGFloat)qmui_extendToTop {
     return self.qmui_top;
 }
@@ -635,6 +605,7 @@ static char kAssociatedObjectKey_fixedSize;
 @implementation UIView (QMUI_Debug)
 
 QMUISynthesizeBOOLProperty(qmui_needsDifferentDebugColor, setQmui_needsDifferentDebugColor)
+QMUISynthesizeBOOLProperty(qmui_hasDebugColor, setQmui_hasDebugColor)
 
 static char kAssociatedObjectKey_shouldShowDebugColor;
 - (void)setQmui_shouldShowDebugColor:(BOOL)qmui_shouldShowDebugColor {
@@ -643,17 +614,15 @@ static char kAssociatedObjectKey_shouldShowDebugColor;
         [QMUIHelper executeBlock:^{
             ExtendImplementationOfVoidMethodWithoutArguments([UIView class], @selector(layoutSubviews), ^(UIView *selfObject) {
                 if (selfObject.qmui_shouldShowDebugColor) {
+                    selfObject.qmui_hasDebugColor = YES;
                     selfObject.backgroundColor = [selfObject debugColor];
-                    [selfObject renderColorWithSubviews:selfObject.subviews];
-                } else if (objc_getAssociatedObject(selfObject, &kAssociatedObjectKey_shouldShowDebugColor)) {
-                    // 设置过 qmui_shouldShowDebugColor，但当前的值为 NO 的情况，则无脑清空所有背景色（可能会把业务自己设置的背景色去掉，由于是调试功能，无所谓）
-                    selfObject.backgroundColor = nil;
                     [selfObject renderColorWithSubviews:selfObject.subviews];
                 }
             });
         } oncePerIdentifier:@"UIView (QMUIDebug) shouldShowDebugColor"];
+        
+        [self setNeedsLayout];
     }
-    [self setNeedsLayout];
 }
 - (BOOL)qmui_shouldShowDebugColor {
     BOOL flag = [objc_getAssociatedObject(self, &kAssociatedObjectKey_shouldShowDebugColor) boolValue];
@@ -700,19 +669,15 @@ static char kAssociatedObjectKey_sizeThatFitsBlock;
 }
 
 - (void)renderColorWithSubviews:(NSArray *)subviews {
-    // 只处理第一级 subviews
     for (UIView *view in subviews) {
         if ([view isKindOfClass:[UIStackView class]]) {
             UIStackView *stackView = (UIStackView *)view;
             [self renderColorWithSubviews:stackView.arrangedSubviews];
         }
+        view.qmui_hasDebugColor = YES;
         view.qmui_shouldShowDebugColor = self.qmui_shouldShowDebugColor;
         view.qmui_needsDifferentDebugColor = self.qmui_needsDifferentDebugColor;
-        if (view.qmui_shouldShowDebugColor) {
-            view.backgroundColor = [view debugColor];
-        } else {
-            view.backgroundColor = nil;
-        }
+        view.backgroundColor = [self debugColor];
     }
 }
 

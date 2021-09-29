@@ -174,16 +174,8 @@
     __block CGFloat width = 0;
     __block CGFloat height = UIEdgeInsetsGetVerticalValue(self.padding);
     [self.itemSections qmui_enumerateNestedArrayWithBlock:^(__kindof QMUIPopupMenuBaseItem *item, BOOL *stop) {
-        CGSize itemSize = [item sizeThatFits:CGSizeMake(size.width, CGFLOAT_MAX)];
-        CGFloat itemHeight = item.height;
-        if (itemHeight < 0) {
-            itemHeight = self.itemHeight;
-        }
-        // QMUIViewSelfSizingHeight
-        if (isinf(itemHeight)) {
-            itemHeight = itemSize.height;
-        }
-        height += itemHeight;
+        height += item.height >= 0 ? item.height : self.itemHeight;
+        CGSize itemSize = [item sizeThatFits:CGSizeMake(size.width, height)];
         width = MAX(width, MIN(itemSize.width, size.width));
     }];
     size.width = width;
@@ -202,14 +194,7 @@
         NSArray<QMUIPopupMenuBaseItem *> *items = self.itemSections[section];
         for (NSInteger row = 0, rowCount = items.count; row < rowCount; row ++) {
             QMUIPopupMenuBaseItem *item = items[row];
-            CGFloat itemHeight = item.height;
-            if (itemHeight < 0) {
-                itemHeight = self.itemHeight;
-            }
-            if (isinf(itemHeight)) {
-                itemHeight = [item sizeThatFits:CGSizeMake(contentWidth, CGFLOAT_MAX)].height;
-            }
-            item.frame = CGRectMake(0, minY, contentWidth, itemHeight);
+            item.frame = CGRectMake(0, minY, contentWidth, item.height >= 0 ? item.height : self.itemHeight);
             minY = CGRectGetMaxY(item.frame);
             
             if (self.shouldShowItemSeparator && row < rowCount - 1) {

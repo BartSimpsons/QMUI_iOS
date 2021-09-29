@@ -24,7 +24,6 @@
 #import "CALayer+QMUI.h"
 #import "QMUIKeyboardManager.h"
 #import "QMUIAppearance.h"
-#import "QMUILabel.h"
 
 static NSUInteger alertControllerCount = 0;
 
@@ -188,8 +187,8 @@ static NSUInteger alertControllerCount = 0;
 
 @property(nonatomic, strong) CALayer *extendLayer;
 
-@property(nonatomic, strong) QMUILabel *titleLabel;
-@property(nonatomic, strong) QMUILabel *messageLabel;
+@property(nonatomic, strong) UILabel *titleLabel;
+@property(nonatomic, strong) UILabel *messageLabel;
 @property(nonatomic, strong) QMUIAlertAction *cancelAction;
 
 @property(nonatomic, strong) NSMutableArray<QMUIAlertAction *> *alertActions;
@@ -1039,7 +1038,7 @@ static NSUInteger alertControllerCount = 0;
 - (void)setTitle:(NSString *)title {
     _title = title;
     if (!self.titleLabel) {
-        self.titleLabel = [[QMUILabel alloc] init];
+        self.titleLabel = [[UILabel alloc] init];
         self.titleLabel.numberOfLines = 0;
         [self.headerScrollView addSubview:self.titleLabel];
     }
@@ -1065,7 +1064,7 @@ static NSUInteger alertControllerCount = 0;
 - (void)setMessage:(NSString *)message {
     _message = message;
     if (!self.messageLabel) {
-        self.messageLabel = [[QMUILabel alloc] init];
+        self.messageLabel = [[UILabel alloc] init];
         self.messageLabel.numberOfLines = 0;
         [self.headerScrollView addSubview:self.messageLabel];
     }

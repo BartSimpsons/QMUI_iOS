@@ -98,7 +98,7 @@
 
 - (void)qmui_performSelector:(SEL)selector withPrimitiveReturnValue:(void *)returnValue arguments:(void *)firstArgument, ... {
     NSMethodSignature *methodSignature = [self methodSignatureForSelector:selector];
-    QMUIAssert(methodSignature, @"NSObject (QMUI)", @"- [%@ qmui_performSelector:@selector(%@)] 失败，方法不存在。", NSStringFromClass(self.class), NSStringFromSelector(selector));
+    NSAssert(methodSignature, @"- [%@ qmui_performSelector:@selector(%@)] 失败，方法不存在。", NSStringFromClass(self.class), NSStringFromSelector(selector));
     NSInvocation *invocation = [NSInvocation invocationWithMethodSignature:methodSignature];
     [invocation setTarget:self];
     [invocation setSelector:selector];
@@ -348,6 +348,7 @@ static char kAssociatedObjectKey_QMUIAllBoundObjects;
 
 - (void)qmui_bindObject:(id)object forKey:(NSString *)key {
     if (!key.length) {
+        NSAssert(NO, @"");
         return;
     }
     if (object) {
@@ -359,6 +360,7 @@ static char kAssociatedObjectKey_QMUIAllBoundObjects;
 
 - (void)qmui_bindObjectWeakly:(id)object forKey:(NSString *)key {
     if (!key.length) {
+        NSAssert(NO, @"");
         return;
     }
     if (object) {
@@ -371,10 +373,11 @@ static char kAssociatedObjectKey_QMUIAllBoundObjects;
 
 - (id)qmui_getBoundObjectForKey:(NSString *)key {
     if (!key.length) {
+        NSAssert(NO, @"");
         return nil;
     }
     id storedObj = [[self qmui_allBoundObjects] objectForKey:key];
-    if ([storedObj respondsToSelector:@selector(isQMUIWeakObjectContainer)] && ((QMUIWeakObjectContainer *)storedObj).isQMUIWeakObjectContainer) {
+    if ([storedObj isKindOfClass:[QMUIWeakObjectContainer class]]) {
         storedObj = [(QMUIWeakObjectContainer *)storedObj object];
     }
     return storedObj;

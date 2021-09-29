@@ -15,6 +15,7 @@
 
 #import "QMUIToastBackgroundView.h"
 #import "QMUICore.h"
+#import "QMUIVisualEffectView.h"
 
 @interface QMUIToastBackgroundView ()
 
@@ -37,9 +38,10 @@
     _shouldBlurBackgroundView = shouldBlurBackgroundView;
     if (shouldBlurBackgroundView) {
         UIBlurEffect *effect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleLight];
-        _effectView = [[UIVisualEffectView alloc] initWithEffect:effect];
+        _effectView = [[QMUIVisualEffectView alloc] initWithEffect:effect];
         self.effectView.layer.cornerRadius = self.cornerRadius;
         self.effectView.layer.masksToBounds = YES;
+        self.effectView.foregroundColor = nil;
         [self addSubview:self.effectView];
     } else {
         if (self.effectView) {

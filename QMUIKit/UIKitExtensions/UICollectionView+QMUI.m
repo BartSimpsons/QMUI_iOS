@@ -37,7 +37,10 @@
                     }
                 }
                 if (!isIndexPathLegal) {
-                    QMUIAssert(NO, @"UICollectionView (QMUI)", @"%@ - target indexPath : %@ ，不合法的indexPath。\n%@", selfObject, indexPath, [NSThread callStackSymbols]);
+                    QMUILogWarn(@"UICollectionView (QMUI)", @"%@ - target indexPath : %@ ，不合法的indexPath。\n%@", selfObject, indexPath, [NSThread callStackSymbols]);
+                    if (QMUICMIActivated && !ShouldPrintQMUIWarnLogToConsole) {
+                        NSAssert(NO, @"出现不合法的indexPath");
+                    }
                     return;
                 }
                 

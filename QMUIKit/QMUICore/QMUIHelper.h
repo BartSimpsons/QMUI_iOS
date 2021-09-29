@@ -137,7 +137,8 @@ extern const CGPoint QMUIBadgeInvalidateOffset;
 + (void)inspectContextSize:(CGSize)size;
 
 /// context是否合法
-+ (BOOL)inspectContextIfInvalidated:(CGContextRef)context;
++ (void)inspectContextIfInvalidatedInDebugMode:(CGContextRef)context;
++ (BOOL)inspectContextIfInvalidatedInReleaseMode:(CGContextRef)context;
 @end
 
 
@@ -246,12 +247,6 @@ extern const CGPoint QMUIBadgeInvalidateOffset;
  * @return 在 iOS 13 以上返回 UIStatusBarStyleDarkContent，在 iOS 12 及以下返回 UIStatusBarStyleDefault
 */
 @property(class, nonatomic, readonly) UIStatusBarStyle statusBarStyleDarkContent;
-
-/**
- 在非 UIApplicationStateActive 的时机去设置 UIAppearance 可能引发第三方输入法 crash，因此提供这个方法判断当前是否可以更新 UIAppearance。
- 详情请见 https://github.com/Tencent/QMUI_iOS/issues/1281
- */
-@property(class, nonatomic, assign, readonly) BOOL canUpdateAppearance;
 
 @end
 

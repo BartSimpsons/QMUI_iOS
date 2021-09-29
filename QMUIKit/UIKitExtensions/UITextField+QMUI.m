@@ -48,12 +48,10 @@
     });
 }
 
-- (void)setQmui_selectedRange:(NSRange)qmui_selectedRange {
-    self.selectedTextRange = [self qmui_convertUITextRangeFromNSRange:qmui_selectedRange];
-}
-
 - (NSRange)qmui_selectedRange {
-    return [self qmui_convertNSRangeFromUITextRange:self.selectedTextRange];
+    NSInteger location = [self offsetFromPosition:self.beginningOfDocument toPosition:self.selectedTextRange.start];
+    NSInteger length = [self offsetFromPosition:self.selectedTextRange.start toPosition:self.selectedTextRange.end];
+    return NSMakeRange(location, length);
 }
 
 - (UIButton *)qmui_clearButton {

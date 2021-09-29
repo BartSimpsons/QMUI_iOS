@@ -84,7 +84,7 @@
 }
 
 - (void)setCellClass:(Class)cellClass {
-    QMUIAssert([cellClass isSubclassOfClass:[QMUITableViewCell class]], NSStringFromClass(self.class), @"%@.cellClass 必须为 QMUITableViewCell 的子类", NSStringFromClass(self.class));
+    NSAssert([cellClass isSubclassOfClass:[QMUITableViewCell class]], @"%@.cellClass 必须为 QMUITableViewCell 的子类", NSStringFromClass(self.class));
     _cellClass = cellClass;
 }
 
