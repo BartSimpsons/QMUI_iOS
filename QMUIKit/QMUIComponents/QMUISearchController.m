@@ -43,7 +43,12 @@ BeginIgnoreDeprecatedWarning
 
 - (void)initTableView {
     [super initTableView];
+    
+    // UISearchController.searchBar 作为 UITableView.tableHeaderView 时，进入搜索状态，搜索结果列表顶部有一大片空白
+    // 不要让系统自适应了，否则在搜索结果（navigationBar 隐藏）push 进入下一级界面（navigationBar 显示）过程中系统自动调整的 contentInset 会跳来跳去
+    // https://github.com/Tencent/QMUI_iOS/issues/1473
     self.tableView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+    
     self.tableView.keyboardDismissMode = UIScrollViewKeyboardDismissModeOnDrag;
     if ([self.delegate respondsToSelector:@selector(didLoadTableViewInSearchResultsTableViewController:)]) {
         [self.delegate didLoadTableViewInSearchResultsTableViewController:self];
@@ -400,7 +405,7 @@ static char kAssociatedObjectKey_shouldShowSearchBar;
 
 - (void)initSearchController {
     if ([self isViewLoaded] && self.shouldShowSearchBar && !self.searchController) {
-        self.searchController = [[QMUISearchController alloc] initWithContentsViewController:self resultsTableViewStyle:self.tableView.qmui_style];
+        self.searchController = [[QMUISearchController alloc] initWithContentsViewController:self resultsTableViewStyle:self.tableView.style];
         self.searchController.searchResultsDelegate = self;
         self.searchController.searchBar.placeholder = @"搜索";
         self.searchController.searchBar.qmui_usedAsTableHeaderView = YES;// 以 tableHeaderView 的方式使用 searchBar 的话，将其置为 YES，以辅助兼容一些系统 bug

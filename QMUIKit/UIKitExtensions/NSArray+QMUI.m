@@ -84,6 +84,18 @@
     return [result copy];
 }
 
+- (id)qmui_firstMatchWithBlock:(BOOL (NS_NOESCAPE^)(id _Nonnull))block {
+    if (!block) {
+        return nil;
+    }
+    for (id item in self) {
+        if (block(item)) {
+            return item;
+        }
+    }
+    return nil;
+}
+
 - (NSArray *)qmui_mapWithBlock:(id (NS_NOESCAPE^)(id item))block {
     if (!block) {
         return self;
@@ -92,6 +104,20 @@
     NSMutableArray *result = [[NSMutableArray alloc] initWithCapacity:self.count];
     for (NSInteger i = 0; i < self.count; i++) {
         [result addObject:block(self[i])];
+    }
+    return [result copy];
+}
+
+- (NSArray *)qmui_compactMapWithBlock:(id _Nullable (NS_NOESCAPE^)(id _Nonnull))block {
+    if (!block) {
+        return self;
+    }
+    NSMutableArray *result = [[NSMutableArray alloc] initWithCapacity:self.count];
+    for (NSInteger i = 0; i < self.count; i++) {
+        id item = block(self[i]);
+        if (item) {
+            [result addObject:item];
+        }
     }
     return [result copy];
 }

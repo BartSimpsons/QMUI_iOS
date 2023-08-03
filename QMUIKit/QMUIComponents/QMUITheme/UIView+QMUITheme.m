@@ -140,19 +140,6 @@ QMUISynthesizeIdCopyProperty(qmui_themeDidChangeBlock, setQmui_themeDidChangeBlo
         BOOL isValidatedEffect = [value isKindOfClass:QMUIThemeVisualEffect.class] && (!manager || [((QMUIThemeVisualEffect *)value).managerName isEqual:manager.name]);
         BOOL isOtherObject = ![value isKindOfClass:UIColor.class] && ![value isKindOfClass:UIImage.class] && ![value isKindOfClass:UIVisualEffect.class];// 支持所有非 color、image、effect 的其他对象，例如 NSAttributedString
         if (isOtherObject || isValidatedColor || isValidatedImage || isValidatedEffect) {
-            
-            // 修复 iOS 12 及以下版本，QMUIThemeImage 在搭配 resizable 使用的情况下可能无法跟随主题刷新的 bug
-            // https://github.com/Tencent/QMUI_iOS/issues/971
-            if (@available(iOS 13.0, *)) {
-            } else {
-                if (isValidatedImage) {
-                    QMUIThemeImage *image = (QMUIThemeImage *)value;
-                    if (image.qmui_resizable) {
-                        value = image.copy;
-                    }
-                }
-            }
-            
             [self performSelector:setter withObject:value];
         }
         EndIgnorePerformSelectorLeaksWarning
@@ -160,13 +147,28 @@ QMUISynthesizeIdCopyProperty(qmui_themeDidChangeBlock, setQmui_themeDidChangeBlo
     
     // 特殊的 view 特殊处理
     // iOS 10-11 里当 UILabel.attributedText 的文字颜色都相同时，也无法使用 setNeedsDisplay 刷新样式，但只要某个 range 颜色不同就没问题，iOS 9、12-13 也没问题，这个通过 UILabel (QMUIThemeCompatibility) 兼容。
-    static NSArray<Class> *needsDisplayClasses = nil;
-    if (!needsDisplayClasses) needsDisplayClasses = @[UILabel.class, UITextView.class];
-    [needsDisplayClasses enumerateObjectsUsingBlock:^(Class  _Nonnull class, NSUInteger idx, BOOL * _Nonnull stop) {
-        if ([self isKindOfClass:class]) {
+    if ([self isKindOfClass:UILabel.class]) {
+        [self setNeedsDisplay];
+    }
+    
+    if ([self isKindOfClass:UITextView.class]) {
+#ifdef IOS16_SDK_ALLOWED
+        if (@available(iOS 16.0, *)) {
+            // iOS 16 里使用 TextKit 2 的输入框无法通过 setNeedsDisplay 去刷新文本颜色了，所以改为用这种方式去刷新
+            // 以下语句对 iOS 16 里因为访问 UITextView.layoutManager 而回退到 TextKit 1 的输入框无效，但由于 TextKit 1 本来就可以正常刷新，所以没问题。
+            // 注意要考虑输入框内可能存在多种颜色的富文本场景
+            UITextView *textView = (UITextView *)self;
+            NSTextRange *textRange = textView.textLayoutManager.textContentManager.documentRange;
+            if (textRange) {
+                [textView.textLayoutManager invalidateLayoutForRange:textRange];
+            }
+        } else {
+#endif
             [self setNeedsDisplay];
+#ifdef IOS16_SDK_ALLOWED
         }
-    }];
+#endif
+    }
     
     // 输入框、搜索框的键盘跟随主题变化
     if (QMUICMIActivated) {
